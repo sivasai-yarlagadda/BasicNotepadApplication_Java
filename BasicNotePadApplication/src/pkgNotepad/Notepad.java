@@ -1,5 +1,6 @@
 package pkgNotepad;
 
+import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -22,12 +23,42 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
 
+//For MYSql Connection
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
 public class Notepad {
     private static final String LOCK_FILE = "application.lock";  // Lock file to ensure single instance
     private static FileLock lock = null;  // To store the file lock
     private static FileChannel fileChannel = null;  // FileChannel to access the lock file
 
+    //Global Declaration - or to Access across the same class file
+    private static final String URL = "jdbc:mysql://localhost:3306/notepad"; // Change DB name if needed
+    private static final String USER = "root"; // Change if using a different username
+    private static final String PASSWORD = "root"; // Change if you have a password
+
     public static void main(String[] args) {
+    	//Establishing the MySql Connection 
+    	Connection dBConnection = getConnection();
+        if (dBConnection != null) {
+            System.out.println("Database connected successfully!");
+            showNotification("Database connected successfully!");
+
+        }
+        else {
+        	int choice = JOptionPane.showConfirmDialog(
+                    null,
+                    "Database connection failed! Do you want to continue?",
+                    "Connection Failed",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+                );
+
+                if (choice == JOptionPane.NO_OPTION) {
+                    System.exit(0); // Exit if user chooses "No"
+                }
+        }
         // Try to ensure only one instance of the application is running
         if (isApplicationRunning()) {
             JOptionPane.showMessageDialog(null, "The application is already running!", "Instance Check", JOptionPane.WARNING_MESSAGE);
@@ -85,7 +116,17 @@ public class Notepad {
             @Override
             public void windowClosing(WindowEvent e) {
                 // Prompt the user with a confirmation dialog before closing the app
-                int confirm = JOptionPane.showConfirmDialog(mainWindow, "Are you sure you want to exit?", "Exit", JOptionPane.YES_NO_OPTION);
+                Object[] options = {"Yes", "No"}; // Custom button order
+                int confirm = JOptionPane.showOptionDialog(
+                    mainWindow,
+                    "Are you sure you want to exit?",
+                    "Exit",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[1] // Default selection (No)
+                );
                 if (confirm == JOptionPane.YES_OPTION) {
                     System.exit(0); // Close the application
                 }
@@ -96,6 +137,33 @@ public class Notepad {
         mainWindow.setVisible(true);
     }
 
+    static Connection getConnection() {
+        try {
+            return DriverManager.getConnection(URL, USER, PASSWORD);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error connecting to the database: " + e.getMessage());
+        }
+    }
+    static void showNotification(String message) {
+
+        if (SystemTray.isSupported()) {
+            SystemTray tray = SystemTray.getSystemTray();
+            Image image = Toolkit.getDefaultToolkit().createImage("/BasicNotePadApplication/resourcesFolder/NotepadLogo.png"); // Change to actual path
+            TrayIcon trayIcon = new TrayIcon(image, "Database Notification");
+            trayIcon.setImageAutoSize(true);
+            trayIcon.setToolTip("Database Status");
+
+            try {
+                tray.add(trayIcon);
+                trayIcon.displayMessage("Notification", message, TrayIcon.MessageType.INFO);
+            } catch (AWTException e) {
+                e.printStackTrace();
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, message, "Notification", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
     static void addKeyListenerToSave(JFrame mainWindow, JTextArea textArea) {
         // Add a key event listener for "Ctrl + S"
         textArea.addKeyListener(new KeyAdapter() {
