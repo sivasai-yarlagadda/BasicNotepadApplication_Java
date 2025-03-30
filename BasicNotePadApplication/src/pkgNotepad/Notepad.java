@@ -137,7 +137,48 @@ public class Notepad {
         mainWindow.setVisible(true);
     }
 
+    static Connection getConnection() {
+        try {
+            return DriverManager.getConnection(URL, USER, PASSWORD);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error connecting to the database: " + e.getMessage());
+        }
+    }
+    static void showNotification(String message) {
 
+        if (SystemTray.isSupported()) {
+            SystemTray tray = SystemTray.getSystemTray();
+            Image image = Toolkit.getDefaultToolkit().createImage("/BasicNotePadApplication/resourcesFolder/NotepadLogo.png"); // Change to actual path
+            TrayIcon trayIcon = new TrayIcon(image, "Database Notification");
+            trayIcon.setImageAutoSize(true);
+            trayIcon.setToolTip("Database Status");
+
+            try {
+                tray.add(trayIcon);
+                trayIcon.displayMessage("Notification", message, TrayIcon.MessageType.INFO);
+            } catch (AWTException e) {
+                e.printStackTrace();
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, message, "Notification", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    static void addKeyListenerToSave(JFrame mainWindow, JTextArea textArea) {
+        // Add a key event listener for "Ctrl + S"
+        textArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) != 0 && e.getKeyCode() == KeyEvent.VK_S) {
+                    // Ctrl + S was pressed, open file dialog to save
+                    openSaveDialog(mainWindow, textArea.getText());
+                }
+            }
+        });
+
+        // Make sure the JTextArea can receive key events (focusable)
+        textArea.setFocusable(true);
+    }
 
     static void addKeyListenerToClose(JFrame mainWindow) {
         // Add a key event listener for "Ctrl + Q" to close the application
